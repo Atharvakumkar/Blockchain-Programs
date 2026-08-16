@@ -39,9 +39,12 @@ contract Donation {
 
     // Withdraw contract balance
     function withdraw() public {
-
         require(msg.sender == owner, "Only owner can withdraw");
 
-        payable(owner).transfer(address(this).balance);
+        (bool success, ) = payable(owner).call{
+            value: address(this).balance
+        }("");
+
+        require(success, "Transfer failed");
     }
 }
