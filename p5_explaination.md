@@ -1,8 +1,8 @@
-# Practical 5: Donation Smart Contract using MetaMask with Custom Errors
+# Practical 5: Donation Smart Contract using Custom Errors
 
 ## Aim
 
-To create a Solidity smart contract that accepts Ether as donations using a payable function. The contract uses **custom errors** to validate the donor's account balance and the minimum donation amount. Only the contract owner can withdraw the contract balance.
+To create a Solidity smart contract to accept donations using a payable function, validate the donor's balance and minimum donation amount using custom errors, and allow the contract owner to withdraw the complete contract balance.
 
 ---
 
@@ -10,499 +10,374 @@ To create a Solidity smart contract that accepts Ether as donations using a paya
 
 ## 1. SPDX License Identifier
 
-```solidity
-// SPDX-License-Identifier: MIT
-```
+The following line specifies the license of the smart contract.
 
-Specifies the software license of the smart contract.
+    // SPDX-License-Identifier: MIT
 
-- `MIT` is an open-source license.
-- Indicates the terms under which the contract can be used and distributed.
+`MIT` is an open-source license.
 
 ---
 
 ## 2. Solidity Version
 
-```solidity
-pragma solidity ^0.8.20;
-```
+    pragma solidity ^0.8.20;
 
-Specifies that the contract should be compiled using Solidity version **0.8.20** or any compatible version below **0.9.0**.
+This specifies the Solidity compiler version used for the smart contract.
 
 ---
 
 ## 3. Contract Declaration
 
-```solidity
-contract Donation {
-```
+    contract Donation {
 
-Creates a smart contract named **Donation**.
+Creates a smart contract named `Donation`.
 
-This contract performs the following operations:
+The contract is designed to:
 
-- Accepts Ether donations.
-- Checks donor eligibility using custom errors.
-- Stores donations inside the contract.
-- Allows only the owner to withdraw funds.
+- Accept Ether donations.
+- Check the donor's minimum balance.
+- Check the minimum donation amount.
+- Store the donated Ether.
+- Allow only the owner to withdraw the contract balance.
 
 ---
 
-# 4. Owner Variable
+## 4. Owner Variable
 
-```solidity
-address public owner;
-```
+    address public owner;
 
 Stores the Ethereum address of the contract owner.
 
-The keyword `public` automatically creates a getter function.
-
-Example:
-
-```
-0x8Ab34C....
-```
+The `public` keyword automatically creates a getter function that allows the owner address to be viewed.
 
 ---
 
-# 5. Custom Errors
+## 5. Custom Error: Insufficient Balance
 
-## Insufficient Balance Error
+    error InsufficientBalance(uint availableBalance);
 
-```solidity
-error InsufficientBalance(uint availableBalance);
-```
+Defines a custom error named `InsufficientBalance`.
 
-This custom error is generated when the donor's account balance is less than the required minimum balance.
+This error is triggered when the donor's account balance is below the required minimum of 100,000 Wei.
 
-The available balance is returned as an error parameter.
+The donor's available balance is passed as an error parameter.
 
 ---
 
-## Minimum Donation Error
+## 6. Custom Error: Minimum Donation
 
-```solidity
-error MinimumDonation(uint sentAmount);
-```
+    error MinimumDonation(uint sentAmount);
 
-This custom error is generated when the donation amount is less than **5 Gwei**.
+Defines a custom error named `MinimumDonation`.
 
-The donated amount is returned as an error parameter.
+This error is triggered when the donation amount is less than 5 Gwei.
 
----
-
-# 6. Constructor
-
-```solidity
-constructor() {
-```
-
-A constructor is a special function that executes only once when the smart contract is deployed.
+The amount sent by the donor is passed as an error parameter.
 
 ---
 
-```solidity
-owner = msg.sender;
-```
+## 7. Constructor
 
-Stores the deployer's Ethereum address as the contract owner.
+    constructor() {
+        owner = msg.sender;
+    }
 
-### `msg.sender`
+The constructor executes only once when the contract is deployed.
 
-Represents the Ethereum address that called the constructor.
+`msg.sender` represents the address that deploys the contract.
 
-Since the constructor executes during deployment,
-
-the deployer becomes the owner.
+Therefore, the account that deploys the contract automatically becomes the owner.
 
 ---
 
-# 7. Donation Function
+## 8. Donation Function
 
-```solidity
-function donate() public payable
-```
+    function donate() public payable {
 
-Allows users to donate Ether to the smart contract.
+Creates a payable function named `donate()`.
 
----
-
-## Payable Function
-
-```solidity
-payable
-```
-
-The `payable` keyword allows the smart contract to receive Ether.
-
-Without `payable`, the contract cannot accept Ether.
+The `payable` keyword allows the function to receive Ether.
 
 ---
 
-# 8. Donor Balance Validation
+## 9. Donor Balance Check
 
-```solidity
-if (msg.sender.balance < 100000)
-```
+    if (msg.sender.balance < 100000) {
+        revert InsufficientBalance(msg.sender.balance);
+    }
 
-Checks whether the donor's remaining wallet balance is less than **100000 Wei**.
+Checks whether the donor's account balance is less than 100,000 Wei.
 
-If the condition is true,
+The value `100000` is interpreted as Wei.
 
-the transaction is cancelled.
+If the donor's balance is less than this amount, the transaction is rejected.
 
----
-
-```solidity
-revert InsufficientBalance(msg.sender.balance);
-```
-
-Throws the custom error
-
-```
-InsufficientBalance
-```
-
-and returns the donor's current balance.
+The `InsufficientBalance` custom error is triggered.
 
 ---
 
-# 9. Minimum Donation Validation
+## 10. Minimum Donation Check
 
-```solidity
-if (msg.value < 5 gwei)
-```
+    if (msg.value < 5 gwei) {
+        revert MinimumDonation(msg.value);
+    }
 
-Checks whether the amount sent is less than **5 Gwei**.
+Checks whether the amount sent with the donation transaction is less than 5 Gwei.
 
-### `msg.value`
+`msg.value` represents the amount of Ether sent with the current transaction.
 
-Represents the amount of Ether sent with the transaction.
+If the amount is less than 5 Gwei, the donation is rejected.
 
----
-
-```solidity
-revert MinimumDonation(msg.value);
-```
-
-Throws the custom error
-
-```
-MinimumDonation
-```
-
-if the donation is below 5 Gwei.
+The `MinimumDonation` custom error is triggered.
 
 ---
 
-# 10. View Contract Balance
+## 11. Checking Contract Balance
 
-```solidity
-function getBalance() public view returns(uint)
-```
+    function getBalance() public view returns(uint) {
+        return address(this).balance;
+    }
 
-Returns the total Ether stored inside the smart contract.
+Returns the amount of Ether currently stored in the smart contract.
 
----
+### `view`
 
-## View Function
+The `view` keyword means the function only reads blockchain data and does not modify the contract state.
 
-```solidity
-view
-```
+### `address(this).balance`
 
-A view function only reads blockchain data.
+Represents the Ether balance of the current smart contract.
 
-It cannot modify blockchain data.
+The returned value is in Wei.
 
 ---
 
-## Contract Balance
+## 12. Withdraw Function
 
-```solidity
-address(this).balance
-```
+    function withdraw() public {
 
-### `address(this)`
+Allows the contract owner to withdraw the entire contract balance.
 
-Represents the address of the current smart contract.
+### Owner Verification
 
----
-
-### `.balance`
-
-Returns the amount of Ether stored inside the contract.
-
-Example:
-
-```
-5000000000 Wei
-```
-
----
-
-```solidity
-return address(this).balance;
-```
-
-Returns the contract balance.
-
----
-
-# 11. Withdraw Function
-
-```solidity
-function withdraw() public
-```
-
-Transfers the entire contract balance to the owner's wallet.
-
----
-
-# Owner Verification
-
-```solidity
-require(msg.sender == owner, "Only owner can withdraw");
-```
+    require(msg.sender == owner, "Only owner can withdraw");
 
 Checks whether the caller is the contract owner.
 
-If the condition is false,
+If another account calls the function, the transaction is reverted with:
 
-the transaction is cancelled.
-
----
-
-## `require()`
-
-Used to validate conditions before executing the remaining code.
+    Only owner can withdraw
 
 ---
 
-## `msg.sender`
+## 13. Transfer Ether using `call`
 
-Represents the Ethereum address calling the function.
+    (bool success, ) = payable(owner).call{value: address(this).balance}("");
 
-Only the owner's address is allowed.
+Transfers the complete contract balance to the owner.
 
----
+### `payable(owner)`
 
-# Transfer Contract Balance
+Converts the owner's address into a payable address so that it can receive Ether.
 
-```solidity
-payable(owner).transfer(address(this).balance);
-```
+### `address(this).balance`
 
-Transfers the complete contract balance to the owner's Ethereum account.
+Gets the complete Ether balance stored in the contract.
 
----
+### `call{value: ...}("")`
 
-## `payable(owner)`
+Sends the Ether to the owner's address.
 
-Converts the owner's address into a payable address.
+The returned Boolean value is stored in:
 
-Only payable addresses can receive Ether.
+    success
 
----
-
-## `transfer()`
-
-Transfers Ether from the contract to another address.
+It indicates whether the Ether transfer succeeded.
 
 ---
 
-## `address(this).balance`
+## 14. Transfer Verification
 
-Returns the complete Ether balance stored in the smart contract.
+    require(success, "Transfer failed");
 
----
+Checks whether the Ether transfer was successful.
 
-# Practical Execution Steps
+If `success` is `false`, the transaction is reverted with:
 
-## Step 1
-
-Create two MetaMask accounts.
-
-```
-Account 1
-```
-
-```
-Account 2
-```
-
-Both accounts should have more than **0.1 ETH**.
+    Transfer failed
 
 ---
 
-## Step 2
+# Practical Execution in Remix
 
-Open Remix IDE.
+## Step 1: Create the Contract
 
-Create a new file.
+Open Remix IDE and create:
 
-```
-Donation.sol
-```
+    Donation.sol
 
-Paste the smart contract code.
+Paste the Solidity code into the file.
 
 ---
 
-## Step 3
+## Step 2: Compile
 
-Compile the contract.
+Open the **Solidity Compiler** tab.
 
----
+Select compiler version:
 
-## Step 4
+    0.8.20
 
-Connect Remix with MetaMask.
+Click:
 
-Select
-
-```
-Injected Provider - MetaMask
-```
+    Compile Donation.sol
 
 ---
 
-## Step 5
+## Step 3: Deploy
 
-Select **Account 1**.
+Open **Deploy & Run Transactions**.
 
-Deploy the smart contract.
+You can use Remix VM for testing or connect MetaMask using:
 
-Account 1 automatically becomes the owner.
+    Injected Provider - MetaMask
 
----
+Deploy the contract.
 
-## Step 6
-
-Switch MetaMask to **Account 2**.
+The account that deploys the contract becomes the owner.
 
 ---
 
-## Step 7
+## Step 4: Test Donation
 
-Enter a donation amount greater than or equal to **5 Gwei**.
+Set the transaction value to at least:
 
-Call
+    5 Gwei
 
-```
-donate()
-```
+Then call:
 
-The Ether is stored inside the smart contract.
+    donate()
 
----
-
-## Step 8
-
-Call
-
-```
-getBalance()
-```
-
-The contract displays the donated Ether balance.
+The donation should succeed if the donor's balance is at least 100,000 Wei.
 
 ---
 
-## Step 9
+## Step 5: Check Contract Balance
 
-Switch MetaMask back to **Account 1**.
+Click:
 
-Call
+    getBalance()
 
-```
-withdraw()
-```
+The returned value represents the amount stored in the contract in Wei.
 
-The complete contract balance is transferred to the owner's account.
+For example:
+
+    5000000000
+
+represents:
+
+    5 Gwei
 
 ---
 
-## Step 10
+## Step 6: Test Minimum Donation Error
 
-Call
+Set the transaction value to less than:
 
-```
-getBalance()
-```
+    5 Gwei
 
-Output:
+For example:
 
-```
-0
-```
+    1 Gwei
 
-The contract balance is now empty.
+Call:
+
+    donate()
+
+The transaction should revert with the `MinimumDonation` custom error.
+
+---
+
+## Step 7: Withdraw the Balance
+
+Switch to the account that deployed the contract.
+
+Call:
+
+    withdraw()
+
+The contract transfers its entire balance to the owner.
+
+---
+
+## Step 8: Verify Balance
+
+Call:
+
+    getBalance()
+
+After a successful withdrawal, the result should be:
+
+    0
 
 ---
 
 # Program Flow
 
-```
-Start
-   │
-   ▼
-Deploy Smart Contract
-   │
-   ▼
-Constructor Executes
-   │
-   ▼
-Store Owner Address
-   │
-   ▼
-Account 2 Sends Donation
-   │
-   ▼
-Check Donor Balance
-   │
-   ▼
-Balance ≥ 100000 Wei ?
-   │
- ┌───────────────┐
- │               │
- ▼               ▼
-Yes             No
- │               │
- ▼               ▼
-Check Donation  Custom Error
-Amount
- │
- ▼
-Donation ≥ 5 Gwei ?
- │
- ┌───────────────┐
- │               │
- ▼               ▼
-Yes             No
- │               │
- ▼               ▼
-Accept Donation Custom Error
- │
- ▼
-Store Ether in Contract
- │
- ▼
-Owner Calls withdraw()
- │
- ▼
-Verify Owner
- │
- ▼
-Transfer Contract Balance
- │
- ▼
-Contract Balance = 0
- │
- ▼
-End
-```
+    Start
+       |
+       v
+    Deploy Donation Contract
+       |
+       v
+    Deployer becomes Owner
+       |
+       v
+    Donor calls donate()
+       |
+       v
+    Check Donor Balance
+       |
+       v
+    Balance >= 100000 Wei?
+       |
+       +-------- No --------> InsufficientBalance Error
+       |
+      Yes
+       |
+       v
+    Check Donation Amount
+       |
+       v
+    Donation >= 5 Gwei?
+       |
+       +-------- No --------> MinimumDonation Error
+       |
+      Yes
+       |
+       v
+    Accept Donation
+       |
+       v
+    Ether Stored in Contract
+       |
+       v
+    Owner Calls withdraw()
+       |
+       v
+    Verify Owner
+       |
+       v
+    Transfer Contract Balance using call()
+       |
+       v
+    Check Transfer Success
+       |
+       v
+    Contract Balance = 0
+       |
+       v
+    End
 
 ---
 
@@ -513,18 +388,35 @@ End
 - State Variable
 - Custom Errors
 - `payable`
-- `view`
 - `msg.sender`
 - `msg.value`
-- `address(this).balance`
+- `msg.sender.balance`
+- `view`
 - `require()`
-- `transfer()`
+- `revert`
+- `address(this).balance`
+- `call()`
 - Ether Transfer
 - Access Control
-- MetaMask Integration
+
+---
+
+# Important Values
+
+| Requirement | Value |
+|---|---:|
+| Minimum donor balance | 100,000 Wei |
+| Minimum donation | 5 Gwei |
+| Withdrawal permission | Contract owner only |
+
+### Unit Conversion
+
+    1 Gwei = 1,000,000,000 Wei
+
+    5 Gwei = 5,000,000,000 Wei
 
 ---
 
 # Conclusion
 
-This smart contract demonstrates secure donation handling on the Ethereum blockchain using **payable functions** and **custom errors**. It validates the donor's wallet balance and minimum donation amount before accepting Ether. The contract stores all donations securely and allows only the contract owner to withdraw the accumulated balance. The practical introduces important Solidity concepts such as custom errors, Ether transfers, access control, payable functions, and MetaMask interaction.
+This smart contract demonstrates how to create a donation system using Solidity. The `donate()` function accepts Ether and uses custom errors to validate the donor's minimum account balance and minimum donation amount. The `getBalance()` view function displays the contract balance, while the owner-only `withdraw()` function transfers the complete balance using `call()`. The practical demonstrates payable functions, custom errors, validation, access control, Ether transfers, and Solidity's `view` functions.
